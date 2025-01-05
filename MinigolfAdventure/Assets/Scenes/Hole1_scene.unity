@@ -7539,7 +7539,7 @@ SphereCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1364009138}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: d3395617ccae743d4b20ff61aa9e84e2, type: 2}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -7548,7 +7548,7 @@ SphereCollider:
     m_Bits: 0
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
-  m_ProvidesContacts: 0
+  m_ProvidesContacts: 1
   m_Enabled: 1
   serializedVersion: 3
   m_Radius: 0.034971617
@@ -7562,25 +7562,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 1364009138}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bba11cbed40d346cc9ce3a3c63dfec5f, type: 3}
+  m_Script: {fileID: 11500000, guid: 0564c5e5048014c0a9aebad719d52248, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isAI: 1
-  isIdle: 0
-  isShooting: 0
-  holeCoords: {x: 951.545, y: 0, z: 589.557}
   rb: {fileID: 1364009144}
   displayText: {fileID: 570515911}
-  hole_message: {fileID: 0}
-  PB_message: {fileID: 0}
-  nextLevelButton: {fileID: 423467820}
-  exitButton: {fileID: 581701445}
   star_not_collected: {fileID: 2052840662}
   star_collected_img: {fileID: 310543072}
-  stopVelocity: 0.1
-  shotPower: 10
-  maxPower: 5
-  baseAccuracy: 0.9
+  stopVelocity: 1
+  shotPower: 2
+  maxPower: 3
+  currentHole: 0
+  pastPosition: {x: 0, y: 0, z: 0}
+  autoAimTarget: {fileID: 813698675}
+  gameController: {fileID: -1606638797259905016, guid: 22cc0550e69b24cdfa916812776cba82, type: 3}
 --- !u!1001 &1381459989
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7802,10 +7797,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bba11cbed40d346cc9ce3a3c63dfec5f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isAI: 0
-  isIdle: 0
-  isShooting: 0
-  holeCoords: {x: 0, y: 0, z: 0}
+  gameManager: {fileID: -1606638797259905016, guid: 22cc0550e69b24cdfa916812776cba82, type: 3}
+  playerNumber: 1
   rb: {fileID: 1662837369}
   displayText: {fileID: 1848593938}
   hole_message: {fileID: 1915454599}
@@ -7817,7 +7810,8 @@ MonoBehaviour:
   stopVelocity: 0.1
   shotPower: 1
   maxPower: 10
-  baseAccuracy: 0.9
+  currentHole: 0
+  pastPosition: {x: 0, y: 0, z: 0}
 --- !u!54 &1662837369
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -8059,6 +8053,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1680066121}
   m_CullTransparentMesh: 1
+--- !u!1 &1758587188
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1758587189}
+  m_Layer: 0
+  m_Name: GameObject
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1758587189
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1758587188}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 953.5151, y: 0.84052217, z: 596.69147}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1806716465
 GameObject:
   m_ObjectHideFlags: 0
@@ -9208,7 +9233,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 771d60e76c1e04a45bbcaa879853e150, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 597.8328
+      value: 597.84
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 771d60e76c1e04a45bbcaa879853e150, type: 3}
       propertyPath: m_LocalRotation.w
@@ -9277,3 +9302,4 @@ SceneRoots:
   - {fileID: 702338449}
   - {fileID: 1079143746}
   - {fileID: 98744790}
+  - {fileID: 1758587189}

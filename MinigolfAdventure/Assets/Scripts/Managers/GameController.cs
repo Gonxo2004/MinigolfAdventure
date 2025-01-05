@@ -2,36 +2,30 @@ using UnityEngine;
 
 public class GameController : MonoBehaviour
 {
-    public BallController playerBall;
-    public BallController aiBall;
+    [Header("Referencias a las bolas")]
+    public BallController playerBall;         // Bola del primer jugador (humano)
+    public SecondBallController secondBall;   // Bola del segundo jugador (IA)
 
-    private bool playerTurn = true;
+    [Header("Turnos")]
+    public int currentPlayer = 1;
 
-    void Update()
+    private void Awake()
     {
-        if (playerTurn)
+        // Asegurarnos de que la bola de la IA conozca este GameManager
+        if (secondBall != null)
         {
-            if (playerBall.IsStopped() && !playerBall.isIdle)
-            {
-                playerBall.StopBall();
-                playerTurn = false;
-                Invoke(nameof(AI_Turn), 2f);
-            }
+            secondBall.gameController = this;
         }
+    }
+
+    /// Cambia el turno entre el jugador 1 y la IA (2).
+    public void NextTurn()
+    {
+        if (currentPlayer == 1)
+            currentPlayer = 2;
         else
-        {
-            if (aiBall.IsStopped() && !aiBall.isIdle)
-            {
-                aiBall.StopBall();
-                playerTurn = true;
-            }
-        }
-    }
+            currentPlayer = 1;
 
-    private void AI_Turn()
-    {
-        Debug.Log("Turno de la IA iniciado");
-        aiBall.TakeShotAI();
+        Debug.Log("Ahora es el turno del jugador: " + currentPlayer);
     }
-
 }

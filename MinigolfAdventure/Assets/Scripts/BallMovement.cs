@@ -5,20 +5,20 @@ using System;
 
 public class BallController : MonoBehaviour
 {
-    [Header("Tipo de Control")]
-    public bool isAI = false;          // ¿Esta bola pertenece a la IA?
-    public bool isIdle = true;         // Indica si está en reposo
-    public bool isShooting = false;    // Se pone a true cuando va a disparar
+    // ------------------------------------------
+    // NUEVO: referencia al GameManager
+    public GameController gameManager;
 
-    [Header("Coordenadas del hoyo (solo IA)")]
-    [Tooltip("Asigna manualmente la posición del hoyo en el espacio. La IA disparará hacia estas coords.")]
-    public Vector3 holeCoords;
+    // NUEVO: número identificador de este jugador
+    [Tooltip("1 = jugador 1, 2 = jugador 2, etc.")]
+    public int playerNumber = 1;
+    // ------------------------------------------
 
-    [Header("Componentes")]
+    // Referencias de Unity
     public Rigidbody rb;
     private Camera mainCamera;
 
-    [Header("UI (solo para el jugador)")]
+    [Header("UI")]
     public TMP_Text displayText;
     public TMP_Text hole_message;
     public TMP_Text PB_message;
@@ -27,154 +27,110 @@ public class BallController : MonoBehaviour
     public Image star_not_collected;
     public Image star_collected_img;
 
-    [Header("Parámetros de fuerza/movimiento")]
-    public float stopVelocity = 0.1f;   // Velocidad mínima para considerar la bola parada
-    public float shotPower = 10f;       // Multiplicador de fuerza
-    public float maxPower = 20f;        // Fuerza máxima
-    public float baseAccuracy = 0.9f;   // Precisión base de la IA (0.0 a 1.0)
+    [Header("Gameplay")]
+    public float stopVelocity = 0.1f;
+    public float shotPower = 10f;
+    public float maxPower = 20f;
+    public int currentHole = 0;
+    public Vector3 pastPosition;
+
+    // Servicios (inyectados o asignados en tiempo de ejecución)
+    private IScoreService scoreService;
 
     // Variables internas
-    private bool isAiming = false;      // El jugador está apuntando con el ratón
-    private Vector3? worldPoint;        // Punto de impacto en el suelo (jugador)
-    private Vector3 pastPosition;       // Posición previa (si sale de límites)
+    private string personalBest = "0";
     private int currentPar = 0;
+    private bool isAiming = false;
+    private bool isIdle = true;
+    private bool isShooting = false;
+    private Vector3? worldPoint;
 
     void Awake()
     {
+        mainCamera = Camera.main;
         rb.maxAngularVelocity = 1000;
 
-        // Si NO es IA, buscamos la cámara principal para apuntar con el ratón
-        if (!isAI)
+        // Configuración inicial de UI
+        if (exitButton != null) exitButton.gameObject.SetActive(false);
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(false);
+        if (displayText != null) displayText.gameObject.SetActive(true);
+        if (PB_message != null) PB_message.gameObject.SetActive(true);
+        if (star_not_collected != null) star_not_collected.gameObject.SetActive(true);
+        if (star_collected_img != null) star_collected_img.gameObject.SetActive(false);
+
+        // Localizar la factoría en la escena para obtener servicios
+        ServicesFactory factory = FindObjectOfType<ServicesFactory>();
+        if (factory != null)
         {
-            mainCamera = Camera.main;
+            scoreService = factory.GetScoreService();
+        }
+
+        // Cargar "Personal Best" 
+        if (scoreService != null)
+        {
+            personalBest = scoreService.GetPersonalBest(currentHole);
+        }
+        else
+        {
+            personalBest = "None";
+            Debug.LogWarning("ScoreService not found. Setting personalBest to 'None'.");
+        }
+
+        if (PB_message != null)
+        {
+            PB_message.text = (personalBest == "None")
+                ? "PB: None"
+                : $"personal best: {personalBest}";
         }
     }
 
     void Update()
     {
-        // --- Lógica solo para el jugador ---
-        if (!isAI)
+        // Si la velocidad es muy baja, podemos apuntar o disparar
+        if (rb.velocity.magnitude < stopVelocity)
         {
-            // Si la bola está prácticamente parada y en reposo...
-            if (rb.velocity.magnitude < stopVelocity && isIdle)
+            if (isIdle)
             {
                 ProcessAim();
 
-                // Empezar a apuntar cuando se pulsa el botón
                 if (Input.GetMouseButtonDown(0))
                 {
                     isAiming = true;
                 }
-                // Disparar cuando se suelta el botón
+
                 if (Input.GetMouseButtonUp(0) && isAiming && worldPoint.HasValue)
                 {
                     isShooting = true;
                     isAiming = false;
                 }
             }
-            else if (rb.velocity.magnitude >= stopVelocity)
+
+            // Actualizar texto de PAR
+            if (displayText != null)
             {
-                isIdle = false;
+                displayText.text = $"PAR {currentPar}";
+                displayText.enabled = true;
             }
+        }
+        else
+        {
+            // Bola en movimiento
+            isIdle = false;
         }
     }
 
     void FixedUpdate()
     {
-        if (!isAI)
+        // Si se detuvo el movimiento y no está en idle, forzar Stop
+        if (rb.velocity.magnitude < stopVelocity && !isIdle)
         {
-            // Si la bola está parada pero no en reposo, detenerla
-            if (rb.velocity.magnitude < stopVelocity && !isIdle)
-            {
-                StopBall();
-            }
-
-            // Realizar disparo del jugador
-            if (isShooting && worldPoint.HasValue)
-            {
-                PlayerShoot(worldPoint.Value);
-                isShooting = false;
-            }
+            Stop();
         }
-    }
 
-    // --------------------------------------------------------------------
-    //                    MÉTODOS PÚBLICOS PARA EL GAMECONTROLLER
-    // --------------------------------------------------------------------
-
-    public void TakeShotAI()
-    {
-        Debug.Log("Disparo IA ejecutado");  // Verifica si este mensaje aparece
-        pastPosition = transform.position;
-        Vector3 direction = (holeCoords - transform.position).normalized;
-        float distance = Vector3.Distance(transform.position, holeCoords);
-        float force = distance * shotPower;
-
-        float factorError = UnityEngine.Random.Range(baseAccuracy, 1.1f);
-        force *= factorError;
-
-        force = Mathf.Min(force, maxPower);
-        rb.AddForce(direction * force, ForceMode.Impulse);
-
-        isIdle = false;
-        currentPar++;
-    }
-
-
-    public bool IsStopped()
-    {
-        return rb.velocity.magnitude < stopVelocity;
-    }
-
-    public void StopBall()
-    {
-        rb.velocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        isIdle = true;
-    }
-
-    public void OutOfBounds()
-    {
-        rb.MovePosition(pastPosition);
-        StopBall();
-        isIdle = false;
-    }
-
-    public void OnHoleEntered()
-    {
-        StopBall();
-        if (!isAI)
+        if (isShooting && worldPoint.HasValue)
         {
-            displayText.enabled = false;
-            hole_message.text = GetHoleMessage(currentPar);
-            hole_message.enabled = true;
-            nextLevelButton.gameObject.SetActive(true);
-            exitButton.gameObject.SetActive(true);
-        }
-        currentPar = 0;
-    }
-
-    public void star_collected()
-    {
-        if (star_collected_img != null)
-            star_collected_img.gameObject.SetActive(true);
-
-        if (star_not_collected != null)
-            star_not_collected.gameObject.SetActive(false);
-
-        currentPar--;
-    }
-
-    private string GetHoleMessage(int strokes)
-    {
-        switch (strokes)
-        {
-            case 1: return "¡Hole in One!";
-            case 2: return "¡Eagle!";
-            case 3: return "¡Birdie!";
-            case 4: return "¡Par!";
-            case 5: return "¡Bogey!";
-            default: return "¡Better luck next time!";
+            Shoot(worldPoint.Value);
+            isShooting = false;
         }
     }
 
@@ -186,9 +142,8 @@ public class BallController : MonoBehaviour
 
     private Vector3? CastMouseClickRay()
     {
-        if (mainCamera == null) return null;
-
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             return hit.point;
@@ -196,14 +151,122 @@ public class BallController : MonoBehaviour
         return null;
     }
 
-    private void PlayerShoot(Vector3 point)
+    public void Stop()
     {
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        isIdle = true;
+
+        // ------------------------------------------------
+        // NUEVO: Al detenerse, si este jugador estaba en turno,
+        //        se llama a NextTurn() para pasarlo al siguiente jugador.
+        if (gameManager != null && gameManager.currentPlayer == playerNumber)
+        {
+            gameManager.NextTurn();
+        }
+        // ------------------------------------------------
+    }
+
+    private void Shoot(Vector3 point)
+    {
+        Vector3 horizontalWorldPoint = new Vector3(point.x, transform.position.y, point.z);
         pastPosition = transform.position;
-        Vector3 direction = (point - transform.position).normalized;
-        float strength = Vector3.Distance(transform.position, point);
+
+        Vector3 direction = (horizontalWorldPoint - transform.position).normalized;
+        float strength = Vector3.Distance(transform.position, horizontalWorldPoint);
+
+        // Limitar fuerza
         strength = Mathf.Min(strength, maxPower);
+
         rb.AddForce(direction * strength * shotPower, ForceMode.Impulse);
         isIdle = false;
         currentPar++;
+    }
+
+    // Cuando la bola sale de límites
+    public void OutOfBounds()
+    {
+        rb.MovePosition(pastPosition);
+        Stop();
+        isIdle = false;
+    }
+
+    // Cuando la bola cae en el hoyo
+    public void OnHoleEntered()
+    {
+        if (displayText != null)
+            displayText.enabled = false; // Ocultar PAR
+
+        if (hole_message != null)
+        {
+            hole_message.enabled = true;
+            hole_message.text = GetHoleMessage(currentPar);
+        }
+
+        // Actualizar récord personal si es mejor
+        if (scoreService != null)
+        {
+            string newBest = scoreService.UpdatePersonalBest(currentHole, currentPar);
+            if (newBest != personalBest)
+            {
+                personalBest = newBest;
+                if (PB_message != null)
+                    PB_message.text = $"personal best: {personalBest}";
+            }
+        }
+
+        currentPar = 0;
+        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(true);
+        if (exitButton != null) exitButton.gameObject.SetActive(true);
+        if (displayText != null) displayText.gameObject.SetActive(false);
+
+        ResetBallPosition();
+
+        // ------------------------------------------------
+        // También podemos llamar NextTurn aquí si deseas
+        // que pasar de hoyo implique inmediato cambio de turno.
+        // if (gameManager != null && gameManager.currentPlayer == playerNumber)
+        // {
+        //     gameManager.NextTurn();
+        // }
+        // ------------------------------------------------
+    }
+
+    private string GetHoleMessage(int strokes)
+    {
+        switch (strokes)
+        {
+            case 1: return "¡Hole in One!";
+            case 2: return "¡Eagle!";
+            case 3: return "¡Birdie!";
+            case 4: return "¡Par!";
+            case 5: return "¡Bogey!";
+            case 6: return "¡Double Bogey!";
+            default: return "¡Better luck next time!";
+        }
+    }
+
+    private void ResetBallPosition()
+    {
+        // Desactivar la bola 
+        gameObject.SetActive(false);
+
+        if (displayText != null)
+        {
+            displayText.enabled = true;
+            displayText.text = $"Par: {currentPar}";
+        }
+    }
+
+    // Lógica de estrella (si quieres se puede extraer a otro script)
+    public void star_collected()
+    {
+        if (star_collected_img != null)
+            star_collected_img.gameObject.SetActive(true);
+        if (star_not_collected != null)
+            star_not_collected.gameObject.SetActive(false);
+
+        // Lógica particular de "restar" un hoyo (si así lo deseas)
+        currentPar -= 1;
     }
 }
