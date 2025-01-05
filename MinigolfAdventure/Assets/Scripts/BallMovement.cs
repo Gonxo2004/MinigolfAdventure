@@ -6,11 +6,7 @@ using System;
 public class BallController : MonoBehaviour
 {
     // ------------------------------------------
-    // NUEVO: referencia al GameManager
     public GameController gameManager;
-
-    // NUEVO: número identificador de este jugador
-    [Tooltip("1 = jugador 1, 2 = jugador 2, etc.")]
     public int playerNumber = 1;
     // ------------------------------------------
 
@@ -28,7 +24,7 @@ public class BallController : MonoBehaviour
     public Image star_collected_img;
 
     [Header("Gameplay")]
-    public float stopVelocity = 0.1f;
+    public float stopVelocity = 0.3f;
     public float shotPower = 10f;
     public float maxPower = 20f;
     public int currentHole = 0;
@@ -194,6 +190,7 @@ public class BallController : MonoBehaviour
     // Cuando la bola cae en el hoyo
     public void OnHoleEntered()
     {
+        Debug.Log("Player ha terminado...");
         if (displayText != null)
             displayText.enabled = false; // Ocultar PAR
 
@@ -215,22 +212,24 @@ public class BallController : MonoBehaviour
             }
         }
 
+        // --- AVISAR AL GAME MANAGER QUE ESTE JUGADOR YA ACABÓ ---
+        if (gameManager != null)
+        {
+            gameManager.PlayerHoled(playerNumber, currentPar);
+        }
+        // --------------------------------------------------------
+
         currentPar = 0;
-        if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(true);
-        if (exitButton != null) exitButton.gameObject.SetActive(true);
+        //if (nextLevelButton != null) nextLevelButton.gameObject.SetActive(true);
+        //if (exitButton != null) exitButton.gameObject.SetActive(true);
         if (displayText != null) displayText.gameObject.SetActive(false);
 
-        ResetBallPosition();
+        //ResetBallPosition();
 
-        // ------------------------------------------------
-        // También podemos llamar NextTurn aquí si deseas
-        // que pasar de hoyo implique inmediato cambio de turno.
-        // if (gameManager != null && gameManager.currentPlayer == playerNumber)
-        // {
-        //     gameManager.NextTurn();
-        // }
-        // ------------------------------------------------
+        if (gameManager != null && gameManager.currentPlayer == playerNumber)
+             gameManager.NextTurn();
     }
+
 
     private string GetHoleMessage(int strokes)
     {

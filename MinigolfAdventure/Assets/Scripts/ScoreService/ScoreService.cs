@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class ScoreService : MonoBehaviour, IScoreService
@@ -44,5 +45,53 @@ public class ScoreService : MonoBehaviour, IScoreService
             return newBest;
         }
         return currentBestString;
+    }
+
+    public void SaveFinalScores(int hole, int playerScore, int aiScore)
+    {
+        // El archivo donde guardaremos el histórico
+        string scoresFileName = "AllScores.txt";
+
+        // Leemos lo que hubiera (si existe) para no pisarlo
+        string existingData = fileHandler.ReadFromFile(scoresFileName);
+
+        // Si no hay nada, inicializamos a vacío
+        if (string.IsNullOrEmpty(existingData))
+        {
+            existingData = "";
+        }
+
+        // Creamos la línea de registro
+        // Puedes darle el formato que prefieras (CSV, JSON, etc.)
+        string newLine = $"Hole {hole} -> Player: {playerScore}, AI: {aiScore}\n";
+
+        // Anexamos la nueva línea
+        existingData += newLine;
+
+        // Escribimos todo de nuevo al fichero
+        fileHandler.WriteInFile(scoresFileName, existingData);
+
+        Debug.Log($"Final scores appended to {scoresFileName}: {newLine}");
+    }
+
+    public string[] GetAllScoresHistory()
+    {
+        string scoresFileName = "AllScores.txt";
+        string existingData = fileHandler.ReadFromFile(scoresFileName);
+
+        if (string.IsNullOrEmpty(existingData))
+        {
+            // Si no hay archivo o está vacío
+            return new string[] { "No Scores Yet" };
+        }
+
+        // Dividimos el contenido por saltos de línea
+        // Eliminando entradas vacías en caso de haber saltos extra
+        string[] lines = existingData.Split(
+            new[] { '\n' },
+            StringSplitOptions.RemoveEmptyEntries
+        );
+
+        return lines;
     }
 }
