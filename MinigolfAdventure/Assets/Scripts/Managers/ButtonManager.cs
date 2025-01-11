@@ -7,8 +7,10 @@ public class PlayButton : MonoBehaviour
 {
     public void ChangeScene(string name)
     {
+        Debug.Log("Cambiando a escena: " + name);
         SceneManager.LoadScene(name);
     }
+
 }
 
 
